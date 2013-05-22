@@ -1,0 +1,198 @@
+<div class="row">
+    <!-- Success and Error Messages for the user --> 
+    <div class="span6 offset2" style="height:50px">
+        <div id="success" class="alert alert-success" style="display:none;">
+            <a class="close">×</a>
+            <strong>Well done!</strong> Your answer has been saved
+        </div>
+        <div id="loading" class="alert alert-info" style="display:none;">
+            <a class="close">×</a>
+            Loading next task...
+        </div>
+        <div id="taskcompleted" class="alert alert-info" style="display:none;">
+            <strong>The task has been completed!</strong> Thanks a lot!
+        </div>
+        <div id="finish" class="alert alert-success" style="display:none;">
+            <strong>Congratulations!</strong> You have participated in all available tasks!
+            <br/>
+            <div class="alert-actions">
+                <a class="btn small" href="/">Go back</a>
+                <a class="btn small" href="/app">or, Check other applications</a>
+            </div>
+        </div>
+        <div id="error" class="alert alert-error" style="display:none;">
+            <a class="close">×</a>
+            <strong>Error!</strong> Something went wrong, please contact the site administrators
+        </div>
+    </div> <!-- End Success and Error Messages for the user -->
+</div> <!-- End of Row -->
+
+<!--
+    Task DOM for loading the message that needs to be translated
+    It uses the class="skeleton" to identify the elements that belong to the
+    task.
+-->
+<div class="row skeleton"> <!-- Start Skeleton Row-->
+    <div class="span12 "><!-- Start of Question and Submission DIV (column) -->
+        <h1 id="question">Question</h1> <!-- The question will be loaded here -->
+        <div class="row-fluid">
+            <div class="span8">
+                <div id="msg" class="well"></div>
+                <div id="categories">
+                    <h2>Categories</h2>
+                    <div class="row-fluid">
+                        <div class="span4">
+                            <label class="checkbox">
+                                <input id="economy" type="checkbox"> <i class="icon-money"></i> Economy
+                            </label>
+                            <label class="checkbox">
+                                <input id="education" type="checkbox"> <i class="icon-book"></i> Education
+                            </label>
+                            <label class="checkbox">
+                                <input id="environment" type="checkbox"><i class="icon-leaf"></i> Environment
+                            </label>
+                            <label class="checkbox">
+                                <input id="gender" type="checkbox"><i class="icon-user"></i> Gender
+                            </label>
+                            <label class="checkbox">
+                                <input id="health" type="checkbox"><i class="icon-heart"></i> Health
+                            </label>
+                        </div>
+                        <div class="span4">
+                            <label class="checkbox">
+                                <input id="security" type="checkbox"> <i class="icon-lock"></i> Security
+                            </label>
+                            <label class="checkbox">
+                                <input id="shelter" type="checkbox"> <i class="icon-home"></i> Shelter
+                            </label>
+                            <label class="checkbox">
+                                <input id="human_rights" type="checkbox"><i class="icon-group"></i> Human Rights
+                            </label>
+                            <label class="checkbox">
+                                <input id="religion" type="checkbox"><i class="icon-eye-open"></i> Religion
+                            </label>
+                            <label class="checkbox">
+                                <input id="violence" type="checkbox"><i class="icon-bolt"></i> Violence
+                            </label>
+                        </div>
+                        <div class="span4">
+                            <label class="checkbox">
+                                <input id="other" type="checkbox"/> Other
+                            </label>
+                                <input id="otherValue" type="text" style="display:none;"/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="span4">
+                <!-- Feedback items for the user -->
+                <p>You have categorized: <span id="done" class="label label-info"></span> messages from
+                <!-- Progress bar for the user -->
+                <span id="total" class="label label-inverse"></span></p>
+                <div class="progress progress-striped">
+                    <div id="progress" rel="tooltip" title="#" class="bar" style="width: 0%;"></div>
+                </div>
+                <div id="answer"> <!-- Start DIV for the submission buttons -->
+                    <!-- If the user clicks this button, the saved answer will be value="yes"-->
+                    <button class="btn btn-success btn-answer" value="submit"><i class="icon icon-white icon-thumbs-up"></i> Submit Categories</button>
+                </div><!-- End of DIV for the submission buttons -->
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function loadUserProgress() {
+    pybossa.userProgress('categorize').done(function(data){
+        var pct = Math.round((data.done*100)/data.total);
+        $("#progress").css("width", pct.toString() +"%");
+        $("#progress").attr("title", pct.toString() + "% completed!");
+        $("#progress").tooltip({'placement': 'left'}); 
+        $("#total").text(data.total);
+        $("#done").text(data.done);
+    });
+}
+
+pybossa.taskLoaded(function(task, deferred) {
+    if ( !$.isEmptyObject(task) ) {
+        // load message from task 
+        var msg = $('<p/>');
+        // continue as soon as the message is loaded
+        msg.text(task.info.english);
+        deferred.resolve(task);
+        msg.addClass('lead');
+        task.info.msg = msg;
+        task.info.answer = {'task_id': task.id,
+                            'english': task.info.english,
+                            'economy': 0,
+                            'education': 0,
+                            'environment': 0,
+                            'gender': 0,
+                            'health': 0,
+                            'security': 0,
+                            'shelter': 0,
+                            'human_rights': 0,
+                            'religion': 0,
+                            'violence': 0,
+                            'other': 0};
+    }
+    else {
+        deferred.resolve(task);
+    }
+});
+
+pybossa.presentTask(function(task, deferred) {
+    if ( !$.isEmptyObject(task) ) {
+        loadUserProgress();
+        $('#msg').html('').append(task.info.msg);
+        $('#otherValue').val("");
+        $("#question").html(task.info.question);
+        $('input[type=checkbox]').each(function() {
+            this.checked = false; 
+        }); 
+        $("#other").off('click').on('click', function(evt){
+            $("#otherValue").toggle();
+        });
+        $('.btn-answer').off('click').on('click', function(evt) {
+            var answer = $(evt.target).attr("value");
+            var oneChecked = false;
+            if (typeof answer != 'undefined') {
+                //console.log(answer);
+                if (answer == 'submit'){
+                    $('input[type=checkbox]').each(function() {
+                        if (this.checked) {
+                            oneChecked = true;
+                            if (this.id != 'other') {
+                                task.info.answer[this.id] = 1;
+                            }
+                            else {
+                                task.info.answer[this.id] = $("#otherValue").val();
+                            }
+                        }
+                    });
+                    console.log(task.info.answer);
+                    if (oneChecked) {
+                        pybossa.saveTask(task.id, task.info.answer).done(function() {
+                            deferred.resolve();
+                        });
+                        $("#loading").fadeIn(500);
+                    } else {
+                        alert("Please, choose one of the available options");
+                        return;
+                    }
+                }
+            }
+            else {
+                $("#error").show();
+            }
+        });
+        $("#loading").hide();
+    }
+    else {
+        $(".skeleton").hide();
+        $("#loading").hide();
+        $("#finish").fadeIn(500);
+    }
+});
+
+pybossa.run('categorize');
+</script>
